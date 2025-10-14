@@ -33,4 +33,4 @@ TPOT-Clustering project: https://github.com/Mcamilo/tpot-clustering
 """
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
