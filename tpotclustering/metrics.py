@@ -63,16 +63,24 @@ class UnsupervisedScorer:
 
     def __call__(self, estimator, X):
         try:
-            # Get labels from fitted estimator
-            cluster_labels = estimator.predict(X)
-
-            # Get transformed X if applicable
+            # Get transformed X if applicable (before final clusterer)
             if self.use_transformed_X and hasattr(estimator, "named_steps"):
-                for name, step in list(estimator.named_steps.items())[:-1]:  # exclude final estimator
-                    X = step.transform(X)
+                steps = list(estimator.named_steps.items())
+                for name, step in steps[:-1]:  # all but the last (clusterer)
+                    if hasattr(step, "transform"):
+                        X = step.transform(X)
+            
+            # Always fit before predicting (for consistency)
+            if hasattr(estimator, "fit_predict"):
+                cluster_labels = estimator.fit_predict(X)
+            elif hasattr(estimator, "predict"):
+                cluster_labels = estimator.predict(X)
+            else:
+                raise ValueError("Estimator has no predict or fit_predict method")
 
             score = self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf')
             return score if self.greater_is_better else -score
+
         except Exception as e:
             raise TypeError(f"{self.metric.__name__} failed: {e}")
 
