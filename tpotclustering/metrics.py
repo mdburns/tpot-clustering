@@ -43,46 +43,47 @@ from sklearn.metrics.cluster._unsupervised import (
 )
 from sklearn.metrics.pairwise import cosine_similarity
 
-# class UnsupervisedScorer:
-#     def __init__(self, metric, greater_is_better=True) -> None:
-#         self.metric = metric
-#         self.greater_is_better = greater_is_better
-#     def __call__(self, estimator, X):
-#         try:
-#             cluster_labels = estimator.fit_predict(X)
-#             if self.greater_is_better:
-#                 return self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf') 
-#             return -self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf') 
-#         except Exception as e:
-#             raise TypeError(f"{self.metric.__name__} is not a valid unsupervised metric function")
 class UnsupervisedScorer:
-    def __init__(self, metric, greater_is_better=True, use_transformed_X=True):
+    def __init__(self, metric, greater_is_better=True) -> None:
         self.metric = metric
         self.greater_is_better = greater_is_better
-        self.use_transformed_X = use_transformed_X
-
     def __call__(self, estimator, X):
         try:
-            # Get transformed X if applicable (before final clusterer)
-            if self.use_transformed_X and hasattr(estimator, "named_steps"):
-                steps = list(estimator.named_steps.items())
-                for name, step in steps[:-1]:  # all but the last (clusterer)
-                    if hasattr(step, "transform"):
-                        X = step.transform(X)
-            
-            # Always fit before predicting (for consistency)
-            if hasattr(estimator, "fit_predict"):
-                cluster_labels = estimator.fit_predict(X)
-            elif hasattr(estimator, "predict"):
-                cluster_labels = estimator.predict(X)
-            else:
-                raise ValueError("Estimator has no predict or fit_predict method")
-
-            score = self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf')
-            return score if self.greater_is_better else -score
-
+            cluster_labels = estimator.fit_predict(X)
+            if self.greater_is_better:
+                return self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf') 
+            return -self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf') 
         except Exception as e:
-            raise TypeError(f"{self.metric.__name__} failed: {e}")
+            raise TypeError(f"{self.metric.__name__} is not a valid unsupervised metric function")
+
+# class UnsupervisedScorer:
+#     def __init__(self, metric, greater_is_better=True, use_transformed_X=True):
+#         self.metric = metric
+#         self.greater_is_better = greater_is_better
+#         self.use_transformed_X = use_transformed_X
+
+#     def __call__(self, estimator, X):
+#         try:
+#             # Get transformed X if applicable (before final clusterer)
+#             if self.use_transformed_X and hasattr(estimator, "named_steps"):
+#                 steps = list(estimator.named_steps.items())
+#                 for name, step in steps[:-1]:  # all but the last (clusterer)
+#                     if hasattr(step, "transform"):
+#                         X = step.transform(X)
+            
+#             # Always fit before predicting (for consistency)
+#             if hasattr(estimator, "fit_predict"):
+#                 cluster_labels = estimator.fit_predict(X)
+#             elif hasattr(estimator, "predict"):
+#                 cluster_labels = estimator.predict(X)
+#             else:
+#                 raise ValueError("Estimator has no predict or fit_predict method")
+
+#             score = self.metric(X, cluster_labels) if len(set(cluster_labels)) > 1 else -float('inf')
+#             return score if self.greater_is_better else -score
+
+#         except Exception as e:
+#             raise TypeError(f"{self.metric.__name__} failed: {e}")
 
 class IntraClusterCosineSimilarity(UnsupervisedScorer):
     def __init__(self):
