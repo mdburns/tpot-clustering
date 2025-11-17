@@ -122,11 +122,18 @@ You can cite TPOT-Clustering using the paper accepted at [IJCNN 2025](https://20
 
 ```latex
 @inproceedings{Camilo2025,
-  title={TPOT-Clustering},
-  author={Matheus Camilo da Silva and Sylvio Barbon Junior},
-  booktitle={2025 International Joint Conference on Neural Networks (IJCNN)},
-  year={2025},
-  organization={IEEE}
+  author       = {Matheus Camilo da Silva and Gabriel Marques Tavares and Sylvio Barbon Junior},
+  title        = {TPOT-Clustering},
+  booktitle    = {Proceedings of the 2025 International Joint Conference on Neural Networks (IJCNN)},
+  year         = {2025},
+  month        = {June},
+  publisher    = {IEEE},
+  address      = {Rome, Italy},
+  organization = {IEEE},
+  doi          = {10.1109/IJCNN64981.2025.11228951},
+  isbn         = {979-8-3315-1042-8},
+  isbn_pod     = {979-8-3315-1043-5},
+  url          = {https://ieeexplore.ieee.org/document/11228951}
 }
 ```
 
