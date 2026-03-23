@@ -832,7 +832,8 @@ class TPOTBase(BaseEstimator):
                     # raise the exception if it's our last attempt
                     if attempt == (attempts - 1):
                         raise e
-            return self
+
+        return self
 
     def _setup_memory(self):
         """Setup Memory object for memory caching.
@@ -1134,7 +1135,7 @@ class TPOTBase(BaseEstimator):
         # There are many parameter prefixes in the pipeline strings, used solely for
         # making the terminal name unique, eg. LinearSVC__.
         parameter_prefixes = [
-            (m.start(), m.end()) for m in re.finditer(", [\w]+__", dirty_string)
+            (m.start(), m.end()) for m in re.finditer(r", [\w]+__", dirty_string)
         ]
         # We handle them in reverse so we do not mess up indices
         pretty = dirty_string
