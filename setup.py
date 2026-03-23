@@ -42,7 +42,7 @@ setup(
                     'deap>=1.2',
                     'update_checker>=0.16',
                     'tqdm>=4.36.1',
-                    'stopit>=1.1.1',
+                    'overdue>=0.1.5',
                     'pandas>=0.24.2',
                     'joblib>=0.13.2',
                     'matplotlib>=3.5'],

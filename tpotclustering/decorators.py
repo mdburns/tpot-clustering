@@ -36,9 +36,8 @@ from __future__ import print_function
 from functools import wraps
 import warnings
 from .export_utils import expr_to_tree, generate_pipeline_code
+from overdue import timeout_set_to, TaskAbortedError
 from deap import creator
-
-from stopit import threading_timeoutable, TimeoutException
 
 
 NUM_TESTS = 10
@@ -61,14 +60,11 @@ def _pre_test(func):
     check_pipeline: function
         A wrapper function around the func parameter
     """
-    @threading_timeoutable(default="timeout")
-    def time_limited_call(func, *args):
-        func(*args)
-
     @wraps(func)
     def check_pipeline(self, *args, **kwargs):
         bad_pipeline = True
         num_test = 0  # number of tests
+        expr = []
 
         # a pool for workable pipeline
         while bad_pipeline and num_test < NUM_TESTS:
@@ -105,14 +101,19 @@ def _pre_test(func):
                     sklearn_pipeline = eval(pipeline_code, self.operators_context)
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore')
-                        time_limited_call(
-                            sklearn_pipeline.fit,
-                            self.pretest_X,
-                            self.pretest_y,
-                            timeout=MAX_EVAL_SECS,
-                        )
+                        with timeout_set_to(MAX_EVAL_SECS, raise_exception=True):
+                            sklearn_pipeline.fit(
+                                self.pretest_X,
+                                self.pretest_y,
+                            )
 
                     bad_pipeline = False
+            except TaskAbortedError:
+                message = '_pre_test decorator: {fname}: num_test={n} timeout.'.format(
+                    n=num_test,
+                    fname=func.__name__,
+                )
+                self._update_pbar(pbar_num=0, pbar_msg=message)
             except BaseException as e:
                 message = '_pre_test decorator: {fname}: num_test={n} {e}.'.format(
                     n=num_test,

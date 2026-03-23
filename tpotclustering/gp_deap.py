@@ -36,6 +36,7 @@ TPOT-Clustering project: https://github.com/Mcamilo/tpot-clustering
 import numpy as np
 from deap import tools, gp
 from inspect import isclass
+from contextlib import nullcontext
 from .operator_utils import set_sample_weight
 from sklearn.utils import indexable
 from sklearn.metrics import check_scoring
@@ -44,7 +45,7 @@ from sklearn.model_selection._validation import _fit_and_score
 from sklearn.base import clone
 from collections import defaultdict
 import warnings
-from stopit import threading_timeoutable, TimeoutException
+from overdue import timeout_set_to, TaskAbortedError
 
 
 def pick_two_individuals_eligible_for_crossover(population):
@@ -400,10 +401,9 @@ def mutNodeReplacement(individual, pset):
     return individual,
 
 
-@threading_timeoutable(default="Timeout")
 def _wrapped_cross_val_score(sklearn_pipeline, features, target,
                              cv, scoring_function, sample_weight=None,
-                             groups=None, use_dask=False):
+                             groups=None, use_dask=False, timeout=None):
     """Fit estimator and compute scores for a given dataset split.
 
     Parameters
@@ -463,31 +463,33 @@ def _wrapped_cross_val_score(sklearn_pipeline, features, target,
         return dask.delayed(np.nanmean)(CV_score)
     else:
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter('ignore')
-                scores = [_fit_and_score(estimator=clone(sklearn_pipeline),
-                                         X=features,
-                                         y=target,
-                                         scorer=scorer,
-                                         train=train,
-                                         test=test,
-                                         verbose=0,
-                                         parameters=None,
-                                         error_score='raise',
-                                         fit_params=sample_weight_dict,
-                                         score_params=None
-                                         )
-                                    for train, test in cv_iter]
-                if isinstance(scores[0], list): #scikit-learn <= 0.23.2
-                    CV_score = np.array(scores)[:, 0]
-                elif isinstance(scores[0], dict): # scikit-learn >= 0.24
-                    from sklearn.model_selection._validation import _aggregate_score_dicts
-                    CV_score = _aggregate_score_dicts(scores)["test_scores"]
-                else:
-                    raise ValueError("Incorrect output format from _fit_and_score!")
-                CV_score_mean = np.nanmean(CV_score)
+            timeout_context = timeout_set_to(timeout, raise_exception=True) if timeout is not None else nullcontext()
+            with timeout_context:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    scores = [_fit_and_score(estimator=clone(sklearn_pipeline),
+                                             X=features,
+                                             y=target,
+                                             scorer=scorer,
+                                             train=train,
+                                             test=test,
+                                             verbose=0,
+                                             parameters=None,
+                                             error_score='raise',
+                                             fit_params=sample_weight_dict,
+                                             score_params=None
+                                             )
+                                        for train, test in cv_iter]
+                    if isinstance(scores[0], list): #scikit-learn <= 0.23.2
+                        CV_score = np.array(scores)[:, 0]
+                    elif isinstance(scores[0], dict): # scikit-learn >= 0.24
+                        from sklearn.model_selection._validation import _aggregate_score_dicts
+                        CV_score = _aggregate_score_dicts(scores)["test_scores"]
+                    else:
+                        raise ValueError("Incorrect output format from _fit_and_score!")
+                    CV_score_mean = np.nanmean(CV_score)
             return CV_score_mean
-        except TimeoutException:
+        except TaskAbortedError:
             return "Timeout"
         except Exception as e:
             return -float('inf')
