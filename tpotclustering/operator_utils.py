@@ -33,8 +33,9 @@ TPOT-Clustering project: https://github.com/Mcamilo/tpot-clustering
 """
 
 
+import importlib
 import numpy as np
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, is_classifier, is_clusterer, is_regressor
 from sklearn.gaussian_process.kernels import Kernel
 import inspect
 
@@ -81,11 +82,9 @@ def source_decode(sourcecode, verbose=0):
     op_str = tmp_path.pop()
     import_str = ".".join(tmp_path)
     try:
-        if sourcecode.startswith("tpot."):
-            exec("from {} import {}".format(import_str[4:], op_str))
-        else:
-            exec("from {} import {}".format(import_str, op_str))
-        op_obj = eval(op_str)
+        module_name = import_str[4:] if sourcecode.startswith("tpot.") else import_str
+        module = importlib.import_module(module_name)
+        op_obj = getattr(module, op_str)
     except Exception as e:
         if verbose > 2:
             raise ImportError("Error: could not import {}.\n{}".format(sourcecode, e))
@@ -118,7 +117,7 @@ def set_sample_weight(pipeline_steps, sample_weight=None):
     sample_weight_dict = {}
     if not isinstance(sample_weight, type(None)):
         for (pname, obj) in pipeline_steps:
-            if inspect.getargspec(obj.fit).args.count("sample_weight"):
+            if inspect.getfullargspec(obj.fit).args.count("sample_weight"):
                 step_sw = pname + "__sample_weight"
                 sample_weight_dict[step_sw] = sample_weight
 
@@ -156,7 +155,16 @@ def _is_clusterer(estimator):
     out : bool
         True if estimator is a cluster and False otherwise.
     """
-    return getattr(estimator, "_estimator_type", None) == "clusterer"
+    target = estimator
+    if inspect.isclass(estimator):
+        try:
+            target = estimator()
+        except Exception:
+            return False
+    try:
+        return bool(is_clusterer(target))
+    except Exception:
+        return False
 
 def ARGTypeClassFactory(classname, prange, BaseClass=ARGType):
     """Dynamically create parameter type class.
@@ -314,6 +322,7 @@ def TPOTOperatorClassFactory(
 
             """
             op_arguments = []
+            dep_op_arguments = {}
 
             if dep_op_list:
                 dep_op_arguments = {}

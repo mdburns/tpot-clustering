@@ -34,6 +34,7 @@ TPOT-Clustering project: https://github.com/Mcamilo/tpot-clustering
 
 
 from __future__ import print_function
+import importlib
 import random
 import inspect
 import warnings
@@ -491,15 +492,10 @@ class TPOTBase(BaseEstimator):
         # Import required modules into local namespace so that pipelines
         # may be evaluated directly
         for key in sorted(operator.import_hash.keys()):
-            module_list = ", ".join(sorted(operator.import_hash[key]))
-
-            if key.startswith("tpot."):
-                exec("from {} import {}".format(key[4:], module_list))
-            else:
-                exec("from {} import {}".format(key, module_list))
-
+            module_name = key[4:] if key.startswith("tpot.") else key
+            module = importlib.import_module(module_name)
             for var in operator.import_hash[key]:
-                self.operators_context[var] = eval(var)
+                self.operators_context[var] = getattr(module, var)
 
     def _add_terminals(self, arg_types):
         for _type in arg_types:
